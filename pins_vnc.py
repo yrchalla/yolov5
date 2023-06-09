@@ -1,20 +1,13 @@
 import xml.etree.ElementTree as ET
 
-import os, sys, time
+import os, sys
 import numpy as np
 import random, zipfile, requests
-from PIL import Image
 
 from sklearn.model_selection import train_test_split
 
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import ToTensor
-from torchvision.models import resnet50
-from sklearn.metrics import accuracy_score
 import cv2
 
 # training a few blank tile, testing remove all
@@ -225,3 +218,19 @@ for i, image in enumerate(X_test):
     # Assuming image is a PIL image
     # image.save(image_path)
     cv2.imwrite(image_path, image)
+
+#!pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/
+
+if(torch.cuda.is_available()):
+    print("CUDA is present")
+else:
+    print("CUDA is absent")
+
+print(torch.cuda.current_device())
+torch.cuda.get_device_name(0)
+
+#%pip install -r requirements.txt
+
+# Train YOLOv5s Classification on Imagenette160 for 3 epochs
+#!python classify/train.py --model yolov5s-cls.pt --data ./tiles/train --epochs 5 --img 224 --cache
+#!python classify/predict.py --weights runs/train-cls/exp2/weights/best.pt --img 224 --source ./tiles/test  --name exp_images
