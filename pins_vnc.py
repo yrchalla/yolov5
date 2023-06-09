@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import os, sys, time
 import numpy as np
 import random, zipfile, requests
+from PIL import Image
 
 from sklearn.model_selection import train_test_split
 
@@ -14,6 +15,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.transforms import ToTensor
 from torchvision.models import resnet50
 from sklearn.metrics import accuracy_score
+import cv2
 
 # training a few blank tile, testing remove all
 if getattr(sys, 'frozen', False):
@@ -159,114 +161,67 @@ y_train = y_train.astype(int)
 y_val = y_val.astype(int)
 y_test = y_test.astype(int)
 
+# dump all blue training data as images into ./tiles/train/blue
+# dump all redplus training data as images into ./tiles/train/redplus
+# dump all redminus training data as images into ./tiles/train/redminus
 
+# similarly, dump testing and validation data into ./tiles/test and ./tiles/val
 
-# Define a custom dataset class
-class ImageDataset(Dataset):
-    def __init__(self, images, labels, transform=None):
-        self.images = images
-        self.labels = labels
-        self.transform = transform
+# Define the output directories
+output_dir = os.path.join(current_dir, 'tiles')
+train_dir = os.path.join(output_dir, 'train')
+test_dir = os.path.join(output_dir, 'test')
+val_dir = os.path.join(output_dir, 'val')
 
-    def __len__(self):
-        return len(self.images)
+# Create the output directories
+os.makedirs(train_dir, exist_ok=True)
+os.makedirs(test_dir, exist_ok=True)
+os.makedirs(val_dir, exist_ok=True)
 
-    def __getitem__(self, idx):
-        image = self.images[idx]
-        label = self.labels[idx]
-        if self.transform:
-            image = self.transform(image)
-        return image, label
+# Dump training data
+for i, image in enumerate(X_train):
+    label = y_train[i]
+    if label == 0:
+        class_dir = os.path.join(train_dir, 'blue')
+    elif label == 1:
+        class_dir = os.path.join(train_dir, 'redplus')
+    else:
+        class_dir = os.path.join(train_dir, 'redminus')
+    os.makedirs(class_dir, exist_ok=True)
+    image_path = os.path.join(class_dir, f'image_{i}.jpg')
+    # Save image to the appropriate class directory
+    # Assuming image is a PIL image
+    # image.save(image_path)
+    cv2.imwrite(image_path, image)
 
-# Define the transforms for preprocessing
-transform = ToTensor()
+# Dump validation data
+for i, image in enumerate(X_val):
+    label = y_val[i]
+    if label == 0:
+        class_dir = os.path.join(val_dir, 'blue')
+    elif label == 1:
+        class_dir = os.path.join(val_dir, 'redplus')
+    else:
+        class_dir = os.path.join(val_dir, 'redminus')
+    os.makedirs(class_dir, exist_ok=True)
+    image_path = os.path.join(class_dir, f'image_{i}.jpg')
+    # Save image to the appropriate class directory
+    # Assuming image is a PIL image
+    # image.save(image_path)
+    cv2.imwrite(image_path, image)
 
-# Create dataset objects
-train_dataset = ImageDataset(X_train, y_train, transform)
-val_dataset = ImageDataset(X_val, y_val, transform)
-test_dataset = ImageDataset(X_test, y_test, transform)
-
-# Create dataloaders
-batch_size = 32
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
-
-# Initialize the ResNet-50 model
-model = resnet50(pretrained=False)
-num_classes = 3  # Number of output classes
-in_features = model.fc.in_features
-model.fc = nn.Linear(in_features, num_classes)
-
-# Define the loss function and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-
-# Move the model to the GPU if available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = model.to(device)
-
-# Training loop
-num_epochs = 10
-for epoch in range(num_epochs):
-    # Training
-    model.train()
-    train_loss = 0.0
-    train_accuracy = 0.0
-    for images, labels in train_dataloader:
-        images = images.to(device)
-        labels = labels.to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        train_loss += loss.item() * images.size(0)
-        _, predicted = torch.max(outputs.data, 1)
-        train_accuracy += accuracy_score(predicted.cpu(), labels.cpu())
-
-    # Validation
-    model.eval()
-    val_loss = 0.0
-    val_accuracy = 0.0
-    with torch.no_grad():
-        for images, labels in val_dataloader:
-            images = images.to(device)
-            labels = labels.to(device)
-
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-
-            val_loss += loss.item() * images.size(0)
-            _, predicted = torch.max(outputs.data, 1)
-            val_accuracy += accuracy_score(predicted.cpu(), labels.cpu())
-
-    # Calculate average losses and accuracies
-    train_loss = train_loss / len(train_dataset)
-    train_accuracy = train_accuracy / len(train_dataset)
-    val_loss = val_loss / len(val_dataset)
-    val_accuracy = val_accuracy / len(val_dataset)
-
-    # Print progress
-    print(f"Epoch {epoch + 1}/{num_epochs}:")
-    print(f"  Train Loss: {train_loss:.4f}, Train Accuracy: {train_accuracy:.4f}")
-    print(f"  Val Loss: {val_loss:.4f}, Val Accuracy: {val_accuracy:.4f}")
-
-# Testing
-model.eval()
-test_accuracy = 0.0
-with torch.no_grad():
-    for images, labels in test_dataloader:
-        images = images.to(device)
-        labels = labels.to(device)
-
-        outputs = model(images)
-        _, predicted = torch.max(outputs.data, 1)
-        test_accuracy += accuracy_score(predicted.cpu(), labels.cpu())
-
-test_accuracy = test_accuracy / len(test_dataset)
-print(f"Test Accuracy: {test_accuracy:.4f}")
-
+# Dump testing data
+for i, image in enumerate(X_test):
+    label = y_test[i]
+    if label == 0:
+        class_dir = os.path.join(test_dir, 'blue')
+    elif label == 1:
+        class_dir = os.path.join(test_dir, 'redplus')
+    else:
+        class_dir = os.path.join(test_dir, 'redminus')
+    os.makedirs(class_dir, exist_ok=True)
+    image_path = os.path.join(class_dir, f'image_{i}.jpg')
+    # Save image to the appropriate class directory
+    # Assuming image is a PIL image
+    # image.save(image_path)
+    cv2.imwrite(image_path, image)
