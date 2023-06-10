@@ -46,9 +46,10 @@ if hasattr(os, 'add_dll_directory'):
 else:
     import openslide
 
-blue_list = []
-red_plus_list = []
-red_minus_list = []
+# X = np.array([])
+# Y = np.array([])
+X = []
+Y = []
 
 
 NM_P = 221      # number of pixels in a nanometer
@@ -115,9 +116,15 @@ for WSI_PATH in os.listdir('slides'):
             file = im_roi.convert('RGB')
             np_img = np.array(file)
             if plus:
-                red_plus_list.append(np_img)
+                # X = np.append(X, np_img)
+                # Y = np.append(Y, 1)
+                X.append(np_img)
+                Y.append(1)
             else:
-                red_minus_list.append(np_img)
+                # X = np.append(X, np_img)
+                # Y = np.append(Y, 2)
+                X.append(np_img)
+                Y.append(2)
 
         for location in blue_pin_locations:
             # cx = int(location[0])
@@ -128,20 +135,18 @@ for WSI_PATH in os.listdir('slides'):
             im_roi = slide.read_region((((cx - cx % MICRO_TILE_SIZE) * TILE_SIZE) // MICRO_TILE_SIZE, ((cy - cy % MICRO_TILE_SIZE) * TILE_SIZE) // MICRO_TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
             file = im_roi.convert('RGB')
             np_img = np.array(file)
-            blue_list.append(np_img)
-
-
-print(len(blue_list))
-print(len(red_plus_list))
-print(len(red_minus_list))
+            # X = np.append(X, np_img)
+            # Y = np.append(Y, 0)
+            X.append(np_img)
+            Y.append(0)
 # blue_list and red_list contain all the images
 
 # Combine the lists into a single dataset
-X = np.concatenate((blue_list, red_plus_list, red_minus_list))
-y = np.concatenate((np.zeros(len(blue_list)), np.ones(len(red_plus_list)), np.ones(len(red_minus_list)) * 2))
+# X = np.array(X)
+# Y = np.array(Y)
 
 # Split the dataset into training, validation, and testing sets
-X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train_val, X_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
 
 # Print the sizes of each set
@@ -150,9 +155,9 @@ print("Validation set size:", len(X_val))
 print("Testing set size:", len(X_test))
 
 # Convert the labels to integers
-y_train = y_train.astype(int)
-y_val = y_val.astype(int)
-y_test = y_test.astype(int)
+# y_train = y_train.astype(int)
+# y_val = y_val.astype(int)
+# y_test = y_test.astype(int)
 
 # dump all blue training data as images into ./tiles/train/blue
 # dump all redplus training data as images into ./tiles/train/redplus
@@ -223,11 +228,10 @@ for i, image in enumerate(X_test):
 
 if(torch.cuda.is_available()):
     print("CUDA is present")
+    print(torch.cuda.current_device())
+    torch.cuda.get_device_name(0)
 else:
     print("CUDA is absent")
-
-print(torch.cuda.current_device())
-torch.cuda.get_device_name(0)
 
 #%pip install -r requirements.txt
 
