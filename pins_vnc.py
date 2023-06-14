@@ -3,12 +3,14 @@ import xml.etree.ElementTree as ET
 import os, sys
 import numpy as np
 import random, zipfile, requests
+from PIL import Image
 
 from sklearn.model_selection import train_test_split
 
 
 import torch
 import cv2
+import torchvision.transforms as transforms
 
 # training a few blank tile, testing remove all
 if getattr(sys, 'frozen', False):
@@ -56,7 +58,7 @@ NM_P = 221      # number of pixels in a nanometer
 TILE_SIZE = 1024
 MICRO_TILE_SIZE = 226
 RED_PER_CASE = 30
-BLUE_PER_CASE = 30
+normal_PER_CASE = 30
 
 for WSI_PATH in os.listdir('slides'):
     WSI_PATH = os.path.join('slides', WSI_PATH)
@@ -89,7 +91,7 @@ for WSI_PATH in os.listdir('slides'):
 
         # Find all 'annotation' elements with type='pin'
         red_pins = root.findall(".//annotation[@color='#ff0000']")
-        blue_pins = root.findall(".//annotation[@color='#0000ff']")
+        normal_pins = root.findall(".//annotation[@color='#0000ff']")
 
         # Extract the pin coordinates
         red_pin_locations = []
@@ -100,13 +102,13 @@ for WSI_PATH in os.listdir('slides'):
         if len(red_pin_locations) > RED_PER_CASE:
             red_pin_locations = random.sample(red_pin_locations, RED_PER_CASE)
 
-        blue_pin_locations = []
-        for pin in blue_pins:
+        normal_pin_locations = []
+        for pin in normal_pins:
             x = int((int(pin.find('x').text) + X_Reference)/NM_P)
             y = int((int(pin.find('y').text) + Y_Reference)/NM_P)
-            blue_pin_locations.append((x, y))
-        if len(blue_pin_locations) > BLUE_PER_CASE:
-            blue_pin_locations = random.sample(blue_pin_locations, BLUE_PER_CASE)
+            normal_pin_locations.append((x, y))
+        if len(normal_pin_locations) > normal_PER_CASE:
+            normal_pin_locations = random.sample(normal_pin_locations, normal_PER_CASE)
 
         # Print the extracted pin locations
         for location in red_pin_locations:
@@ -126,7 +128,7 @@ for WSI_PATH in os.listdir('slides'):
                 X.append(np_img)
                 Y.append(2)
 
-        for location in blue_pin_locations:
+        for location in normal_pin_locations:
             # cx = int(location[0])
             # cy = int(location[1])
             # im_roi = slide.read_region((cx - cx % TILE_SIZE, cy - cy % TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
@@ -139,14 +141,37 @@ for WSI_PATH in os.listdir('slides'):
             # Y = np.append(Y, 0)
             X.append(np_img)
             Y.append(0)
-# blue_list and red_list contain all the images
+# normal_list and red_list contain all the images
 
 # Combine the lists into a single dataset
 # X = np.array(X)
 # Y = np.array(Y)
 
+
+
 # Split the dataset into training, validation, and testing sets
 X_train_val, X_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
+
+# Define the data augmentation transforms
+augmentation_transforms = transforms.Compose([
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.RandomRotation(45),
+    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
+])
+
+# Apply data augmentation to each image
+augmented_X_train_val = []
+for image in X_train_val:
+    image = Image.fromarray(image)
+    augmented_image = augmentation_transforms(image)
+    augmented_X_train_val.append(np.array(augmented_image))
+
+# Extend the training set with augmented images
+X_train_val.extend(augmented_X_train_val)
+y_train_val.extend(y_train_val)
+
+
 X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
 
 # Print the sizes of each set
@@ -159,9 +184,9 @@ print("Testing set size:", len(X_test))
 # y_val = y_val.astype(int)
 # y_test = y_test.astype(int)
 
-# dump all blue training data as images into ./tiles/train/blue
-# dump all redplus training data as images into ./tiles/train/redplus
-# dump all redminus training data as images into ./tiles/train/redminus
+# dump all normal training data as images into ./tiles/train/normal
+# dump all MSIplus training data as images into ./tiles/train/MSIplus
+# dump all MSIminus training data as images into ./tiles/train/MSIminus
 
 # similarly, dump testing and validation data into ./tiles/test and ./tiles/val
 
@@ -180,11 +205,11 @@ os.makedirs(val_dir, exist_ok=True)
 for i, image in enumerate(X_train):
     label = y_train[i]
     if label == 0:
-        class_dir = os.path.join(train_dir, 'blue')
+        class_dir = os.path.join(train_dir, 'normal')
     elif label == 1:
-        class_dir = os.path.join(train_dir, 'redplus')
+        class_dir = os.path.join(train_dir, 'MSIplus')
     else:
-        class_dir = os.path.join(train_dir, 'redminus')
+        class_dir = os.path.join(train_dir, 'MSIminus')
     os.makedirs(class_dir, exist_ok=True)
     image_path = os.path.join(class_dir, f'image_{i}.jpg')
     # Save image to the appropriate class directory
@@ -196,11 +221,11 @@ for i, image in enumerate(X_train):
 for i, image in enumerate(X_val):
     label = y_val[i]
     if label == 0:
-        class_dir = os.path.join(val_dir, 'blue')
+        class_dir = os.path.join(val_dir, 'normal')
     elif label == 1:
-        class_dir = os.path.join(val_dir, 'redplus')
+        class_dir = os.path.join(val_dir, 'MSIplus')
     else:
-        class_dir = os.path.join(val_dir, 'redminus')
+        class_dir = os.path.join(val_dir, 'MSIminus')
     os.makedirs(class_dir, exist_ok=True)
     image_path = os.path.join(class_dir, f'image_{i}.jpg')
     # Save image to the appropriate class directory
@@ -212,11 +237,11 @@ for i, image in enumerate(X_val):
 for i, image in enumerate(X_test):
     label = y_test[i]
     if label == 0:
-        class_dir = os.path.join(test_dir, 'blue')
+        class_dir = os.path.join(test_dir, 'normal')
     elif label == 1:
-        class_dir = os.path.join(test_dir, 'redplus')
+        class_dir = os.path.join(test_dir, 'MSIplus')
     else:
-        class_dir = os.path.join(test_dir, 'redminus')
+        class_dir = os.path.join(test_dir, 'MSIminus')
     os.makedirs(class_dir, exist_ok=True)
     image_path = os.path.join(class_dir, f'image_{i}.jpg')
     # Save image to the appropriate class directory
