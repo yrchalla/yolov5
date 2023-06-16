@@ -53,13 +53,16 @@ if not WSI_PATH.endswith('.ndpi'):
     print("Require NDPI")
     sys.exit()
 
+heatmapPrefix = '<?xml version="1.0" encoding="utf-8" standalone="yes"?><annotations>'
+heatmapSuffix = '</annotations>'
 slide = slideRead(WSI_PATH)
 LEVEL = slide.get_best_level_for_downsample(1.0 / 40)
 X_Reference, Y_Reference = get_referance(WSI_PATH, NM_P)
 slide_width, slide_height = slide.dimensions
-
+id = 0
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
+        id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")
         im_roi.save("deleteMe.jpg", "JPEG")
@@ -79,9 +82,40 @@ for i in range(int(slide_width / TILE_SIZE)):
         minus_pattern = r"MSIminus\s+(\w+)"
         minus_match = re.search(minus_pattern, stdout)
         minus = float(minus_match.group(1))
+
+        cx = (i*TILE_SIZE+TILE_SIZE/2)*NM_P - X_Reference
+        cy = (j*TILE_SIZE+TILE_SIZE/2)*NM_P - Y_Reference
+
         if (normal == max(normal, plus, minus)):
-            print("NORMAL")
+            color = '#0000ff'
+            pred = 'NORMAL'
         elif plus == max(normal, plus, minus):
-            print("PLUS")
+            color = '#ff0000'
+            pred = 'MSI POSITIVE'
         else:
-            print("MINUS")
+            color = '#ff0000'
+            pred = 'MSI NEGATIVE'
+
+        heatmapPrefix += f"""<ndpviewstate id="{id}">
+                <title>{pred + ':' + str(max(normal, plus, minus))}</title>
+                <details/>
+                <coordformat>nanometers</coordformat>
+                <lens>4.630434</lens>
+                <x>1334342</x>
+                <y>2423208</y>
+                <z>0</z>
+                <showtitle>0</showtitle>
+                <showhistogram>0</showhistogram>
+                <showlineprofile>0</showlineprofile>
+                <annotation type="pin" displayname="AnnotatePin" color="{color}">
+                    <x>{cx}</x>
+                    <y>{cy}</y>
+                    <icon>pinblue</icon>
+                    <stricon>iconpinblue</stricon>
+                </annotation>
+            </ndpviewstate>
+        """
+
+with open(sys.argv[1] + '.ndpa', "w") as file:
+    # Write the string to the file
+    file.write(heatmapPrefix+heatmapSuffix)
