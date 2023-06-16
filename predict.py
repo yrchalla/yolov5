@@ -11,6 +11,7 @@ start_time = time.time()
 from subprocess import Popen, PIPE, STDOUT
 from classify.predict import run_with_prediction
 from pathlib import Path
+import numpy as np
 TILE_SIZE = 1024
 NM_P = 221
 
@@ -62,16 +63,25 @@ LEVEL = slide.get_best_level_for_downsample(1.0 / 40)
 X_Reference, Y_Reference = get_referance(WSI_PATH, NM_P)
 slide_width, slide_height = slide.dimensions
 id = 0
+ims = []
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
         print(id , '/' , int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
         id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")
-        im_roi.save("deleteMe.jpg", "JPEG")
-        command = 'python classify/predict.py --weights best.pt --source deleteMe.jpg'
+        im_roi = np.array(im_roi)
+        im_roi = im_roi.reshape((1,3,1024,1024))
+        ims.append(im_roi)
+        print(im_roi.shape)
 
-        pred = run_with_prediction(Path('best.pt'), Path('deleteMe.jpg'))
+preds = run_with_prediction('best.pt', ims)
+print(len(preds))
+id = 0
+for i in range(int(slide_width / TILE_SIZE)):
+    for j in range(int(slide_height / TILE_SIZE)):
+        id+=1
+        pred = preds[id-1]
         cx = (i*TILE_SIZE+TILE_SIZE/2)*NM_P - X_Reference
         cy = (j*TILE_SIZE+TILE_SIZE/2)*NM_P - Y_Reference
 
@@ -100,7 +110,6 @@ for i in range(int(slide_width / TILE_SIZE)):
                 </annotation>
             </ndpviewstate>
         """
-
         
 
 with open(sys.argv[1] + '.ndpa', "w") as file:
