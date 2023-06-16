@@ -6,8 +6,11 @@ PyTorch Hub:     model = torch.hub.load('ultralytics/yolov5', 'custom', 'runs\tr
 """
 
 # write python code to break an ndpi whole slide image into tiles of 1024 pixels and run predict for each tile 
-import sys, zipfile, os, requests, re
+import sys, zipfile, os, requests, re, time
+start_time = time.time()
 from subprocess import Popen, PIPE, STDOUT
+from classify.predict import run_with_prediction
+from pathlib import Path
 TILE_SIZE = 1024
 NM_P = 221
 
@@ -47,7 +50,6 @@ if hasattr(os, 'add_dll_directory'):
 else:
     import openslide
 
-
 WSI_PATH = sys.argv[1]
 if not WSI_PATH.endswith('.ndpi'):
     print("Require NDPI")
@@ -62,42 +64,23 @@ slide_width, slide_height = slide.dimensions
 id = 0
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
+        print(id + '/' + int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
         id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")
         im_roi.save("deleteMe.jpg", "JPEG")
         command = 'python classify/predict.py --weights best.pt --source deleteMe.jpg'
-        # result = subprocess.run(command, shell=True, capture_output=True, text=True)\
-        # stdout = result.stdout
-        process = Popen(command, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        # Get the stdout output as a string
-        stdout = process.stdout.read()
-        stdout = str(stdout)
-        normal_pattern = r"normal\s+([0-9.]+)"
-        normal_match = re.search(normal_pattern, stdout)
-        normal = float(normal_match.group(1))
-        plus_pattern = r"MSIplus\s+(\w+)"
-        plus_match = re.search(plus_pattern, stdout)
-        plus = float(plus_match.group(1))
-        minus_pattern = r"MSIminus\s+(\w+)"
-        minus_match = re.search(minus_pattern, stdout)
-        minus = float(minus_match.group(1))
 
+        pred = run_with_prediction(Path('best.pt'), Path('deleteMe.jpg'))
         cx = (i*TILE_SIZE+TILE_SIZE/2)*NM_P - X_Reference
         cy = (j*TILE_SIZE+TILE_SIZE/2)*NM_P - Y_Reference
 
-        if (normal == max(normal, plus, minus)):
+        if (pred == 'normal'):
             color = '#0000ff'
-            pred = 'NORMAL'
-        elif plus == max(normal, plus, minus):
-            color = '#ff0000'
-            pred = 'MSI POSITIVE'
         else:
             color = '#ff0000'
-            pred = 'MSI NEGATIVE'
-
         heatmapPrefix += f"""<ndpviewstate id="{id}">
-                <title>{pred + ':' + str(max(normal, plus, minus))}</title>
+                <title>{pred}</title>
                 <details/>
                 <coordformat>nanometers</coordformat>
                 <lens>4.630434</lens>
@@ -116,6 +99,13 @@ for i in range(int(slide_width / TILE_SIZE)):
             </ndpviewstate>
         """
 
+        
+
 with open(sys.argv[1] + '.ndpa', "w") as file:
     # Write the string to the file
     file.write(heatmapPrefix+heatmapSuffix)
+
+end_time = time.time()
+execution_time = end_time - start_time
+
+print(f"Execution time: {execution_time / 60} min")
