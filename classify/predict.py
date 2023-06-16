@@ -210,7 +210,7 @@ def run_with_prediction(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
-    source = str(source)
+    # source = str(source)
     save_img = False
 
 
@@ -222,13 +222,14 @@ def run_with_prediction(
 
     # Dataloader
     bs = 1  # batch_size
-    dataset = LoadImages(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
-    vid_path, vid_writer = [None] * bs, [None] * bs
+    # dataset = LoadImages(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
+    dataset = source
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
     seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
-    for path, im, im0s, vid_cap, s in dataset:
+    predicted_class = []
+    for im in dataset:
         with dt[0]:
             im = torch.Tensor(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -244,14 +245,14 @@ def run_with_prediction(
             pred = F.softmax(results, dim=1)  # probabilities
 
         # Process predictions
-        predicted_class = ""
+        
         for i, prob in enumerate(pred):  # per image
             seen += 1
             
 
             # Print results
             top5i = prob.argsort(0, descending=True)[:5].tolist()  # top 5 indices
-            predicted_class = names[top5i[0]]  # Get the predicted class
+            predicted_class.append(names[top5i[0]])  # Get the predicted class
 
     return predicted_class
 
