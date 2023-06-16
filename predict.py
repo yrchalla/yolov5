@@ -64,7 +64,7 @@ slide_width, slide_height = slide.dimensions
 id = 0
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
-        print(id + '/' + int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
+        print(id , '/' , int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
         id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")
@@ -77,8 +77,10 @@ for i in range(int(slide_width / TILE_SIZE)):
 
         if (pred == 'normal'):
             color = '#0000ff'
+            colorname = 'blue'
         else:
             color = '#ff0000'
+            colorname = 'red'
         heatmapPrefix += f"""<ndpviewstate id="{id}">
                 <title>{pred}</title>
                 <details/>
@@ -93,8 +95,8 @@ for i in range(int(slide_width / TILE_SIZE)):
                 <annotation type="pin" displayname="AnnotatePin" color="{color}">
                     <x>{cx}</x>
                     <y>{cy}</y>
-                    <icon>pinblue</icon>
-                    <stricon>iconpinblue</stricon>
+                    <icon>pin{colorname}</icon>
+                    <stricon>iconpin{colorname}</stricon>
                 </annotation>
             </ndpviewstate>
         """
