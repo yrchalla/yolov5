@@ -92,6 +92,9 @@ for i in range(int(slide_width / TILE_SIZE)):
         if (pred == 'normal'):
             color = '#0000ff'
             colorname = 'blue'
+        elif (pred == 'MSIminus'):
+            color = '#00ff00'
+            colorname = 'green'
         else:
             color = '#ff0000'
             colorname = 'red'
