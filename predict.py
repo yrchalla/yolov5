@@ -12,8 +12,12 @@ from subprocess import Popen, PIPE, STDOUT
 from classify.predict import run_with_prediction
 from pathlib import Path
 import numpy as np
+from utils.augmentations import classify_transforms
+import cv2
 TILE_SIZE = 1024
 NM_P = 221
+
+transforms = classify_transforms(512)
 
 # training a few blank tile, testing remove all
 if getattr(sys, 'frozen', False):
@@ -69,14 +73,14 @@ for i in range(int(slide_width / TILE_SIZE)):
         print(id , '/' , int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
         id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
-        im_roi = im_roi.convert("RGB")
+        im_roi = im_roi.convert("RGB")  #RGBA to BGR
         im_roi = np.array(im_roi)
-        im_roi = im_roi.transpose(2,0,1)    # 1024, 1024, 3 to 3, 1024, 1024
-        ims.append(im_roi)
-        print(im_roi.shape)
+        im_roi = cv2.cvtColor(im_roi, cv2.COLOR_RGB2BGR)
+        # im_roi = im_roi.transpose(2,0,1)    # 1024, 1024, 3 to 3, 1024, 1024
+        im = transforms(im_roi)
+        ims.append(im)
 
 preds = run_with_prediction('best.pt', ims)
-print(len(preds))
 id = 0
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
