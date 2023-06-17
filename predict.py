@@ -71,7 +71,7 @@ for i in range(int(slide_width / TILE_SIZE)):
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")
         im_roi = np.array(im_roi)
-        im_roi = im_roi.reshape((1,3,1024,1024))
+        im_roi = im_roi.transpose(2,0,1)    # 1024, 1024, 3 to 3, 1024, 1024
         ims.append(im_roi)
         print(im_roi.shape)
 
