@@ -18,7 +18,7 @@ from threading import Lock
 TILE_SIZE = 1024
 NM_P = 221
 
-transforms = classify_transforms(512)
+transforms = classify_transforms(1024)
 
 # custom class wrapping a list in order to make it thread safe
 class ThreadSafeList():
