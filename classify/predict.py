@@ -58,7 +58,7 @@ def run(
         weights=ROOT / 'yolov5s-cls.pt',  # model.pt path(s)
         source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
-        imgsz=(512, 512),  # inference size (height, width)
+        imgsz=(1024, 1024),  # inference size (height, width)
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
@@ -197,7 +197,7 @@ def run_with_prediction(
         source,
         predicted_class,
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
-        imgsz=(512, 512),  # inference size (height, width)
+        imgsz=(1024, 1024),  # inference size (height, width)
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         view_img=False,  # show results
         save_txt=False,  # save results to *.txt
