@@ -13,11 +13,48 @@ from classify.predict import run_with_prediction
 from pathlib import Path
 import numpy as np
 from utils.augmentations import classify_transforms
-import cv2
+import cv2, threading
+from threading import Lock
 TILE_SIZE = 1024
 NM_P = 221
 
 transforms = classify_transforms(512)
+
+# custom class wrapping a list in order to make it thread safe
+class ThreadSafeList():
+    # constructor
+    def __init__(self):
+        # initialize the list
+        self._list = list()
+        # initialize the lock
+        self._lock = Lock()
+ 
+    # add a value to the list
+    def conc(self, value):
+        # acquire the lock
+        with self._lock:
+            # append the value
+            self._list+=(value)
+ 
+    # remove and return the last value from the list
+    def pop(self):
+        # acquire the lock
+        with self._lock:
+            # pop a value from the list
+            return self._list.pop()
+ 
+    # read a value from the list at an index
+    def get(self, index, row):
+        # acquire the lock
+        with self._lock:
+            # read a value at the index
+            return self._list[index:index+row]
+ 
+    # return the number of items in the list
+    def length(self):
+        # acquire the lock
+        with self._lock:
+            return len(self._list)
 
 # training a few blank tile, testing remove all
 if getattr(sys, 'frozen', False):
@@ -67,8 +104,11 @@ LEVEL = slide.get_best_level_for_downsample(1.0 / 40)
 X_Reference, Y_Reference = get_referance(WSI_PATH, NM_P)
 slide_width, slide_height = slide.dimensions
 id = 0
-ims = []
+preds = []
+threads = []
+# run_with_prediction('best.pt', ims, int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE), preds)
 for i in range(int(slide_width / TILE_SIZE)):
+    ims = []
     for j in range(int(slide_height / TILE_SIZE)):
         print(id , '/' , int(slide_width / TILE_SIZE)*int(slide_height / TILE_SIZE))
         id+=1
@@ -79,8 +119,10 @@ for i in range(int(slide_width / TILE_SIZE)):
         # im_roi = im_roi.transpose(2,0,1)    # 1024, 1024, 3 to 3, 1024, 1024
         im = transforms(im_roi)
         ims.append(im)
-
-preds = run_with_prediction('best.pt', ims)
+    threads.append(threading.Thread(target=run_with_prediction, args=('best.pt', ims, preds)))
+    threads[-1].start()
+for thread in threads:
+    thread.join()
 id = 0
 for i in range(int(slide_width / TILE_SIZE)):
     for j in range(int(slide_height / TILE_SIZE)):
@@ -117,7 +159,6 @@ for i in range(int(slide_width / TILE_SIZE)):
                 </annotation>
             </ndpviewstate>
         """
-        
 
 with open(sys.argv[1] + '.ndpa', "w") as file:
     # Write the string to the file
