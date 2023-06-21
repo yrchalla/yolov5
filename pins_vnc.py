@@ -290,4 +290,5 @@ else:
 
 # Train YOLOv5s Classification on Imagenette160 for 3 epochs
 #!python classify/train.py --model yolov5s-cls.pt --data ./tiles/train --epochs 5 --img 224 --cache
-#!python classify/predict.py --weights runs/train-cls/exp2/weights/best.pt --img 224 --source ./tiles/test  --name exp_images
+# python classify/train.py --model yolov5s-cls.pt --data D:\YASHWANTH\yolov5\tiles\ --epochs 1000 --img 1024 --cache disk --batch-size 4
+#!python predict.py ./_.ndpi
