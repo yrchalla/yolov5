@@ -57,8 +57,8 @@ Y = []
 NM_P = 221      # number of pixels in a nanometer
 TILE_SIZE = 1024
 MICRO_TILE_SIZE = 226
-RED_PER_CASE = 30
-normal_PER_CASE = 30
+RED_PER_CASE = 90
+normal_PER_CASE = 45
 
 for WSI_PATH in os.listdir('slides'):
     WSI_PATH = os.path.join('slides', WSI_PATH)
@@ -141,7 +141,35 @@ for WSI_PATH in os.listdir('slides'):
             # Y = np.append(Y, 0)
             X.append(np_img)
             Y.append(0)
+
 # normal_list and red_list contain all the images
+normalCount = Y.count(0)
+plusCount = Y.count(1)
+minusCount = Y.count(2)
+
+if minusCount > min(plusCount, minusCount, normalCount):
+    p = min(plusCount, minusCount, normalCount) / minusCount
+    for i in range(len(Y) - 1, -1, -1):
+        if (Y[i] == 2) and random.random() > p:
+            Y.pop(i)
+            X.pop(i)
+if plusCount > min(plusCount, minusCount, normalCount):
+    p = min(plusCount, minusCount, normalCount) / plusCount
+    for i in range(len(Y) - 1, -1, -1):
+        if (Y[i] == 1) and random.random() > p:
+            Y.pop(i)
+            X.pop(i)
+if normalCount > min(plusCount, minusCount, normalCount):
+    p = min(plusCount, minusCount, normalCount) / normalCount
+    for i in range(len(Y) - 1, -1, -1):
+        if (Y[i] == 0) and random.random() > p:
+            Y.pop(i)
+            X.pop(i)
+
+print("Normal tiles: ", Y.count(0))
+print("Plus tiles: ", Y.count(1))
+print("Minus tiles: ", Y.count(2))
+
 
 # Combine the lists into a single dataset
 # X = np.array(X)
