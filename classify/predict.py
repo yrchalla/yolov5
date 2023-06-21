@@ -33,6 +33,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from math import sqrt
 
 import torch
 import torch.nn.functional as F
@@ -192,8 +193,9 @@ def run(
 
 @smart_inference_mode()
 def run_with_prediction(
-        weights=ROOT / 'yolov5s-cls.pt',  # model.pt path(s)
-        source=ROOT / 'data/images',  # file/dir/URL/glob/screen/0(webcam)
+        weights,
+        source,
+        predicted_class,
         data=ROOT / 'data/coco128.yaml',  # dataset.yaml path
         imgsz=(512, 512),  # inference size (height, width)
         device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
@@ -210,8 +212,7 @@ def run_with_prediction(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
 ):
-    # source = str(source)
-    save_img = False
+
 
 
     # Load model
@@ -222,14 +223,13 @@ def run_with_prediction(
 
     # Dataloader
     bs = 1  # batch_size
-    # dataset = LoadImages(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
-    dataset = source
 
     # Run inference
     model.warmup(imgsz=(1 if pt else bs, 3, *imgsz))  # warmup
-    seen, windows, dt = 0, [], (Profile(), Profile(), Profile())
-    predicted_class = []
-    for im in dataset:
+    seen, _, dt = 0, [], (Profile(), Profile(), Profile())
+    id = 0
+    for im in source:
+        id += 1
         with dt[0]:
             im = torch.Tensor(im).to(model.device)
             im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
@@ -253,8 +253,7 @@ def run_with_prediction(
             # Print results
             top5i = prob.argsort(0, descending=True)[:5].tolist()  # top 5 indices
             predicted_class.append(names[top5i[0]])  # Get the predicted class
-
-    return predicted_class
+            print("Predicted", id)
 
 
 def parse_opt():
