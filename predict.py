@@ -20,42 +20,6 @@ NM_P = 221
 
 transforms = classify_transforms(1024)
 
-# custom class wrapping a list in order to make it thread safe
-class ThreadSafeList():
-    # constructor
-    def __init__(self):
-        # initialize the list
-        self._list = list()
-        # initialize the lock
-        self._lock = Lock()
- 
-    # add a value to the list
-    def conc(self, value):
-        # acquire the lock
-        with self._lock:
-            # append the value
-            self._list+=(value)
- 
-    # remove and return the last value from the list
-    def pop(self):
-        # acquire the lock
-        with self._lock:
-            # pop a value from the list
-            return self._list.pop()
- 
-    # read a value from the list at an index
-    def get(self, index, row):
-        # acquire the lock
-        with self._lock:
-            # read a value at the index
-            return self._list[index:index+row]
- 
-    # return the number of items in the list
-    def length(self):
-        # acquire the lock
-        with self._lock:
-            return len(self._list)
-
 # training a few blank tile, testing remove all
 if getattr(sys, 'frozen', False):
     # The application is running as a bundled executable
@@ -114,11 +78,12 @@ for i in range(int(slide_width / TILE_SIZE)):
         id+=1
         im_roi = slide.read_region((TILE_SIZE * i, j * TILE_SIZE), LEVEL, (TILE_SIZE, TILE_SIZE))
         im_roi = im_roi.convert("RGB")  #RGBA to BGR
-        im_roi = np.array(im_roi)
-        im_roi = cv2.cvtColor(im_roi, cv2.COLOR_RGB2BGR)
-        # im_roi = im_roi.transpose(2,0,1)    # 1024, 1024, 3 to 3, 1024, 1024
-        im = transforms(im_roi)
-        ims.append(im)
+        np_img = np.array(im_roi)
+        # im_roi.save(os.path.join('temp', str(i), str(j)+'.jpg'))
+        cv2.imwrite(os.path.join('temp.jpg'), np_img)
+        imag0 = cv2.imread(('temp.jpg'))
+        imag = transforms(imag0)
+        ims.append(imag)
     threads.append(threading.Thread(target=run_with_prediction, args=('best.pt', ims, preds)))
     threads[-1].start()
 for thread in threads:
@@ -168,3 +133,4 @@ end_time = time.time()
 execution_time = end_time - start_time
 
 print(f"Execution time: {execution_time / 60} min")
+os.remove("temp.jpg")
