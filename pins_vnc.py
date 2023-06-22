@@ -181,23 +181,21 @@ print("Minus tiles: ", Y.count(2))
 X_train_val, X_test, y_train_val, y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
 # Define the data augmentation transforms
-augmentation_transforms = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(45),
-    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
-])
+# augmentation_transforms = transforms.Compose([
+#     transforms.RandomVerticalFlip(),
+#     transforms.RandomRotation(45),
+# ])
 
-# Apply data augmentation to each image
-augmented_X_train_val = []
-for image in X_train_val:
-    image = Image.fromarray(image)
-    augmented_image = augmentation_transforms(image)
-    augmented_X_train_val.append(np.array(augmented_image))
+# # Apply data augmentation to each image
+# augmented_X_train_val = []
+# for image in X_train_val:
+#     image = Image.fromarray(image)
+#     augmented_image = augmentation_transforms(image)
+#     augmented_X_train_val.append(np.array(augmented_image))
 
-# Extend the training set with augmented images
-X_train_val.extend(augmented_X_train_val)
-y_train_val.extend(y_train_val)
+# # Extend the training set with augmented images
+# X_train_val.extend(augmented_X_train_val)
+# y_train_val.extend(y_train_val)
 
 
 X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
