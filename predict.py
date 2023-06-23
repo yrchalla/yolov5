@@ -80,8 +80,12 @@ for i in range(int(slide_width / TILE_SIZE)):
         im_roi = im_roi.convert("RGB")  #RGBA to BGR
         np_img = np.array(im_roi)
         # im_roi.save(os.path.join('temp', str(i), str(j)+'.jpg'))
-        cv2.imwrite(os.path.join('temp.jpg'), np_img)
-        imag0 = cv2.imread(('temp.jpg'))
+        # cv2.imwrite(os.path.join('temp.jpg'), np_img)
+        # imag0 = cv2.imread(('temp.jpg'))
+        # Save the image to an in-memory buffer
+        _, buffer = cv2.imencode('.jpg', np_img)
+        # Read the image from the buffer
+        imag0 = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
         imag = transforms(imag0)
         ims.append(imag)
     threads.append(threading.Thread(target=run_with_prediction, args=('best.pt', ims, preds)))
@@ -133,4 +137,3 @@ end_time = time.time()
 execution_time = end_time - start_time
 
 print(f"Execution time: {execution_time / 60} min")
-os.remove("temp.jpg")
